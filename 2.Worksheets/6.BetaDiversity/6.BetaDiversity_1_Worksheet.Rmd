@@ -1,6 +1,6 @@
 ---
 title: '8\. Worksheet: Among Site (Beta) Diversity -- Part 1'
-author: "Student Name; Z620: Quantitative Biodiversity, Indiana University"
+author: "Atalanta Ritter; Z620: Quantitative Biodiversity, Indiana University"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: pdf_document
 geometry: margin=2.54cm
@@ -49,10 +49,10 @@ In the R code chunk below, provide the code to:
 4. load the `vegan` R package (be sure to install if needed).  
 
 ```{r}
-
-
-
-
+rm(list = ls())
+getwd()
+setwd("~/GitHub/QB2023_Ritter/2.Worksheets/6.BetaDiversity")
+require(vegan)
 ```
 
 ## 2) LOADING DATA
@@ -63,21 +63,21 @@ In the R code chunk below, do the following:
 2. explore the structure of the dataset.
 
 ```{r}
-# note, pleae do not print the dataset when submitting
-
-
-
+# note, please do not print the dataset when submitting
+require(ade4)
+data(doubs)
+str(doubs, max.level = 1)
 ```
 
 ***Question 1***:  Describe some of the attributes of the `doubs` dataset.  
 
-a.  How many objects are in `doubs`?
+a.  How many objects are in `doubs`? 
 b.  How many fish species are there in the `doubs` dataset?
 c.  How many sites are in the `doubs` dataset?
 
-> ***Answer 1a***:  
-> ***Answer 1b***:  
-> ***Answer 1c***:  
+> ***Answer 1a***:  There are 4 objects: env, fish, xy, and species.
+> ***Answer 1b***:  27 fish species
+> ***Answer 1c***:  30 sites
 
 ### Visualizing the Doubs River Dataset
 
@@ -87,9 +87,9 @@ a.  How does fish richness vary along the sampled reach of the Doubs River?
 b.  How does Brown Trout (*Salmo trutta*) abundance vary along the sampled reach of the Doubs River?
 c.  What do these patterns say about the limitations of using richness when examining patterns of biodiversity?
 
-> ***Answer 2a***:  
-> ***Answer 2b***:  
-> ***Answer 2c***:  
+> ***Answer 2a***:  Richness tends to increase as you go further down the Doubs River; upstream sites have lower richness, downstream sites have higher richness.
+> ***Answer 2b***:  Brown trout tend to be more abundant in upstream sites as opposed to downstream sites.
+> ***Answer 2c***: These patterns show how richness doesn't capture all of the information about a given ecological system. For instance, it doesn't capture the differences in evenness along the stream sites. Without looking at the brown trout abundance, we would not know that the upstream sites are (probably) predominantly made up of brown trout.
 
 ## 3) QUANTIFYING BETA-DIVERSITY
 
@@ -99,10 +99,6 @@ In the R code chunk below, do the following:
 2. use this function to analyze various aspects of $\beta$-diversity in the Doubs River.  
 
 ```{r}
-
-
-
-
 
 
 
@@ -126,7 +122,7 @@ In order to quantify $\beta$-diversity for more than two samples, we need to int
 
 ***Question 4***: How do incidence- and abundance-based metrics differ in their treatment of rare species?
 
-> ***Answer 4***:  
+> ***Answer 4***: Incidence-based metrics give rare species equal weight to common species, whereas abundance-based metrics take into account whether a species appeared many times vs. only a few times. 
 
 In the R code chunk below, do the following:  
 
@@ -136,14 +132,16 @@ In the R code chunk below, do the following:
 4. construct a resemblance matrix based on Bray-Curtis Distance ("fish.db").  
 
 ```{r}
+fish <- doubs$fish
+fish <- fish[-8, ] # remove site 8 from data bc no fish were observed
 
+# calculate sørenson
+fish.ds <- vegdist(fish, method = "bray", binary = TRUE)
+# calculate bray-curtis
+fish.db <- vegdist(fish, method = "bray")
 
-
-
-
-
-
-
+fish.ds
+fish.db
 ```
 
 ***Question 5***: Using the distance matrices from above, answer the following questions:
@@ -165,16 +163,12 @@ In the R code chunk below, do the following:
 3. use the `levelplot()` function to create a heatmap of fish abundances in the Doubs River.
 
 ```{r}
-
-
-
-
-
-
-
-
-
-
+require(viridis)
+# define order of sites
+order <- rev(attr(fish.db, "Labels"))
+# plot heatmap
+levelplot(as.matrix(fish.db)[, order], aspect = "iso", col.regions = turbo, xlab = "Doubs Site", 
+          ylab = "Doubs Site", scales = list(cex =0.5, main = "Bray-Curtis Distance"))
 ```
 
 ### B.  Cluster Analysis
@@ -252,3 +246,8 @@ b.  Generate a hypothesis about which fish species are potential indicators of r
 Load the dataset from that you and your partner are using for the team project. 
 Use one of the tools introduced in the beta diversity module to visualize your data. 
 Describe any interesting patterns and identify a hypothesis is relevant to the principles of biodiversity. 
+
+```{r}
+
+```
+
