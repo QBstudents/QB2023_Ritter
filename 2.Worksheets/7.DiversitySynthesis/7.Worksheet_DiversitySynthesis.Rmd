@@ -1,6 +1,6 @@
 ---
 title: '7\. Worksheet: Diversity Synthesis'
-author: "Student Name; Z620: Quantitative Biodiversity, Indiana University"
+author: "Atalanta Ritter; Z620: Quantitative Biodiversity, Indiana University"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: pdf_document
 geometry: margin=2.54cm
@@ -65,6 +65,25 @@ In smaller groups, take 15 minutes to brainstorm questions, code, statistical te
 
 ## DATA ANALYSIS
 
+```{r}
+# set up
+rm(list = ls())
+getwd()
+setwd("~/GitHub/QB2023_Ritter/2.Worksheets/7.DiversitySynthesis")
+# load packages
+package.list <- c('vegan', 'tidyverse', 'ggplot2', 'dplyr', 'broom')
+for (package in package.list) {
+  if (!require(package, character.only = TRUE, quietly = TRUE)) {
+    install.packages(package)
+  }
+  library(c(package), character.only = TRUE)
+}
+# load in dataset
+raw.candy <- read.csv("/Users/Atalanta/Downloads/QB Data Wrangling Lab SP23 - Sheet1.csv")
+# get rid of names column
+candy <- raw.candy[,c(1,3:32)]
+```
+
 ### 1) Sampling coverage and rarefaction curves
 
 **Question 1:** Using this data, explore how well your sampling effort was. Compare your sampling efforts with other groups. Do you think that your samples cover the actual diversity found in each source community? You can use rarefaction and coverage tools you have learned earlier. 
@@ -72,6 +91,27 @@ In smaller groups, take 15 minutes to brainstorm questions, code, statistical te
 **Answer 1:** Use the space below to generate a rarefaction curve/sample coverage based on the data we collected in class for each community. Make sure to annotate your code using # symbols so others (including instructors) understand what you have done and why you have done it. 
 
 ```{r}
+# dividing site x sp matrix into the 2 communities 
+community.A <- as.data.frame(t(candy[1:4,-c(1)]))
+community.B <- as.data.frame(t(candy[5:8,-c(1)]))
+# observed species in community A
+candy.SA <- specnumber(community.A)
+# observed species in community B
+candy.SB <- specnumber(community.B)
+# minimum number of species observed in community A
+min.N.A <- min(rowSums(community.A))
+# minimum number of species observed in community B
+min.N.B <- min(rowSums(community.B))
+# community A rarefaction curve
+A.rarefy <- rarefy(x = community.A, sample = min.N.A, se = TRUE)
+rarecurve(x = community.A, step = 20, col = "blue", cex = 0.6, las = 1)
+abline(0, 1, col = "red")
+text(1500, 1500, "1:1", pos = 2, col = "red")
+# community B rarefaction curve
+B.rarefy <- rarefy(x = community.B, sample = min.N.A, se = TRUE)
+rarecurve(x = community.B, step = 20, col = "blue", cex = 0.6, las = 1)
+abline(0, 1, col = "red")
+text(1500, 1500, "1:1", pos = 2, col = "red")
 ```
 
 
@@ -84,15 +124,47 @@ What is the variation among the samples in your group and between the communitie
 **Answer 2a - Analysis:** Use the space below for code that is being used to analyze your data and test your hypotheses on your chosen alpha diversity tool. Make sure to annotate your code using # symbols so others (including instructors) understand what you have done and why you have done it.
 
 ```{r}
+# shannon's entropy 'H for community A 
+community.A.H <- diversity(community.A, index = "shannon")
+# shannon's entropy 'H for community A 
+community.B.H <- diversity(community.B, index = "shannon")
+# write function for SEM
+SEM <- function(x) {
+  return(sd(x)/sqrt(length(x)))
+}
+# bind vectors as columns in a single dataframe
+communities <- t(cbind.data.frame(community.A.H, community.B.H))
+# rename row names 
+row.names(communities) <- c("Community A", "Community B")
+# create an empty data grame to fill with summary statistics
+com_div_sum <- as.data.frame(matrix(ncol = 2, nrow = 2))
+colnames(com_div_sum) <- c("mean", "sem")
+# loop that iteratively calculates the mean and SE for each row 
+for(i in 1:2) {
+  x = as.numeric(communities[i,])
+  com_div_sum[i,1] <- mean(x) # calculate mean, save to diversity indices data
+  com_div_sum[i,2] <- SEM(x) # calculate SEM, save to diversity indices data
+}
+# add grouping column to data
+com_div_sum$community <- c("A", "B")
 ```
 
 **Answer 2b - Plot:** With your analysis, create one (and only one, although it can have multiple panels) *publication-quality* figure.
 
 ```{r}
+# plot mean and SE of Shannon entropy for communities A and B
+ggplot(data = com_div_sum, aes(x = community, y= mean)) + 
+  geom_point(size = 4) +
+  geom_errorbar(aes(ymin = mean - sem, ymax = mean + sem), width = 0.2) + 
+  ylab("Shannon entropy ('H)") + 
+  xlab("Source community") + 
+  theme_bw()
 ```
 
 **Answer 2c - Interpret results:** Write an informative yet succinct (~5 sentences) caption that creates a "stand-alone" figure. Take a peek at figures and figure captions in a paper published in your favorite journal for inspiration.
 
+> The figure above plots Shannon's entropy ('H) across sites within two different communities. Community A's average 'H value was 1.048 +/- 0.056 and Community B's average 'H was 0.979 +/- 0.067. Overall, these values are quite similar to each other, suggesting that alpha diversity in terms of species richness and evenness is similar across communities (although this does not mean that the species composition is similar). However, there is considerable overlap in their standard error, probably due to inconsistent sampling efforts.  
+ 
 
 ### 3) Beta diversity
 
@@ -103,14 +175,49 @@ Can you detect compositional differences between each source community sampled?
 **Answer 3a - Analysis:** Use the space below for code that is being used to analyze your data and test your hypotheses on your chosen beta diversity tool. Make sure to annotate your code using # symbols so others (including instructors) understand what you have done and why you have done it.
 
 ```{r}
+# PERMANOVA
+# test hypothesis that community composition varies between A and B
+library(indicspecies)
+# create factors vector, where factor is the community
+community <- c(rep("A", 4), rep("B", 4))
+# run PERMANOVA with adonis function
+adonis(candy[,2:31] ~ community, method = "bray", permutations = 999)
+# I got a p value of 0.031, so community composition does significantly vary
+# based on community 
 ```
 
 **Answer 3b - Plot:** With your analysis, create one (and only one, although it can have multiple panels) *publication-quality* figure.  
 
 ```{r}
+# Wrangle data and obtain principal components scores
+com_candy_tidy <- candy[,2:31] %>%
+# identify data frame of interest
+mutate_if(is.integer, as.numeric) %>%
+# basic statements and operations.here we convert integers to numeric values
+prcomp(center = T, scale = T) %>%
+# run a pca with correlation matrix
+tidy('scores') %>%
+# this is a useful broom function to tidy model outputs as data frames
+filter(PC<3) %>%
+# filter out principle components > 2
+pivot_wider(names_from = PC, values_from = value) %>%
+# converts the data to wide format, opposite function is pivot_longer
+mutate(site = rep(c('1','2','3','4'), times = 2)) %>%
+# add a site column for plotting
+mutate(community = rep(c('A', 'B'), each = 4)) %>%
+# add a community column for plotting
+dplyr::rename('PC1' = '1', 'PC2' = '2') %>%
+# you can rename variable names
+select(community, PC1, PC2)
+# let us plot ordination results
+ggplot(data = com_candy_tidy, aes(x = PC1, y = PC2, color = community))+
+geom_point(size = 5)+
+theme_bw()
 ```
 
 **Answer 3c - Interpret results:** Write an informative yet succinct (~5 sentences) caption that creates a "stand-alone" figure. Take a peek at figures and figure captions in a paper published in your favorite journal for inspiration.
+
+> This is an ordination plot of two ecological communities A and B, which were each independently sampled 4 times. Along the PC1 axis, there is a clear distinction between the communities, with A having predominantly lower values and B having higher values. This is most likely indicative of differences in community composition, which did vary significantly between A and B (F-model = 3.8605, P = 0.031). There is less of a distinction along the PC2 axis; values within both communities range from low to high. This could be a result of differences in sampling effort or accuracy.
 
 
 ## SUBMITTING YOUR ASSIGNMENT
